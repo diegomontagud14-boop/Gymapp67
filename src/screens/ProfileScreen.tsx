@@ -19,7 +19,9 @@ import {
 } from 'react-native';
 
 import { Avatar, BLUE, FollowButton, PeopleSheet, WorkoutCard } from '@/components/SocialParts';
+import ExercisesScreen from '@/screens/ExercisesScreen';
 import CalendarScreen from '@/screens/CalendarScreen';
+import MeasuresScreen from '@/screens/MeasuresScreen';
 import { LiveWorkoutModal, PulsingDot, RoutineViewModal } from '@/components/WorkoutView';
 import { startOfWeek } from '@/lib/format';
 import { fetchLive, isFresh, subscribeLive } from '@/lib/live';
@@ -292,7 +294,7 @@ export default function ProfileScreen({
   const [liveOpen, setLiveOpen] = useState(false);
   const [routines, setRoutines] = useState<RoutineRow[]>([]);
   const [routineOpen, setRoutineOpen] = useState<RoutineRow | null>(null);
-  const [section, setSection] = useState<'calendar' | null>(null);
+  const [section, setSection] = useState<'calendar' | 'measures' | null>(null);
 
   const load = useCallback(async () => {
     setErrorMsg('');
@@ -382,9 +384,17 @@ export default function ProfileScreen({
     }
   };
 
+  if (section === 'exercises' && isMe) {
+    return <ExercisesScreen me={me} onExit={() => setSection(null)} />;
+  }
+
   if (section === 'calendar' && isMe) {
     return <CalendarScreen me={me} onExit={() => setSection(null)} />;
   }
+
+  if (section === 'measures' && isMe) {
+  return <MeasuresScreen me={me} onExit={() => setSection(null)} />;
+}
 
   if (editing && profile && isMe) {
     return (
@@ -511,10 +521,12 @@ export default function ProfileScreen({
                     key={b.k}
                     style={styles.menuBtn}
                     onPress={() =>
-                      b.k === 'calendar'
-                        ? setSection('calendar')
-                        : Alert.alert(b.label, 'Esta sección llegará próximamente.')
-                    }
+  b.k === 'calendar'
+    ? setSection('calendar')
+    : b.k === 'measures'
+      ? setSection('measures')
+      : Alert.alert(b.label, 'Esta sección llegará próximamente.')
+}
                   >
                     <Ionicons name={b.icon} size={26} color="#5AB0FF" />
                     <Text style={styles.menuBtnText}>{b.label}</Text>

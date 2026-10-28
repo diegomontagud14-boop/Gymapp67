@@ -122,6 +122,20 @@ const buildMaps = () => {
   }
 };
 
+// Ejercicio del catálogo al que corresponde un ejercicio guardado en un entreno
+export const catalogOf = (ex: any): CatalogExercise | undefined => {
+  buildMaps();
+  let c: CatalogExercise | undefined = ex?.exId ? byId!.get(ex.exId) : undefined;
+  if (!c && typeof ex?.name === 'string') c = byName!.get(norm(ex.name.replace(/\s+agarre\s.+$/i, '')));
+  return c;
+};
+export const exKey = (ex: any): string => {
+  const c = catalogOf(ex);
+  return c ? 'c:' + c.id : 'n:' + norm(String(ex?.name ?? ''));
+};
+export const exLabel = (ex: any): string => catalogOf(ex)?.name ?? String(ex?.name ?? '');
+export const normText = norm;
+
 const exerciseAxes = (ex: any): { primary: Axis[]; secondary: Axis[] } => {
   buildMaps();
   let c: CatalogExercise | undefined = ex.exId ? byId!.get(ex.exId) : undefined;
@@ -236,3 +250,53 @@ export const computeStats = (ws: W[]): Stats => {
     avgVolume: ws.length ? volume / ws.length : 0,
   };
 };
+
+/* ---------- Ejercicios (para la sección "Ejercicios") ---------- */
+export const lookupCatalog = (ex: any): CatalogExercise | undefined => {
+  buildMaps();
+  let c: CatalogExercise | undefined = ex.exId ? byId!.get(ex.exId) : undefined;
+  if (!c && typeof ex.name === 'string') c = byName!.get(norm(ex.name.replace(/\s+agarre\s.+$/i, '')));
+  return c;
+};
+
+// Un mismo ejercicio con distinto agarre/enganche cuenta como el mismo
+export const exerciseKey = (ex: any) => {
+  const cat = lookupCatalog(ex);
+  return {
+    key: cat ? cat.id : 'name:' + norm(String(ex.name ?? '')),
+    name: cat ? cat.name : String(ex.name ?? ''),
+    cat,
+    custom: typeof ex.exId === 'string' && ex.exId.startsWith('custom-'),
+  };
+};
+
+// ids y nombres con los que ese ejercicio aparece guardado (para la clasificación)
+export const exerciseAliases = (key: string, name: string, cat?: CatalogExercise) => {
+  if (!cat) return { ids: [] as string[], names: [name.toLowerCase()] };
+  return {
+    ids: [cat.id, ...(cat.grips ?? []).map((g) => g.id)],
+    names: [
+      cat.name.toLowerCase(),
+      ...(cat.grips ?? []).map((g) => `${cat.name} agarre ${g.l.toLowerCase()}`.toLowerCase()),
+    ],
+  };
+};
+
+export type Session = { workout: W; date: Date; sets: any[] };
+
+// Series completadas (sin calentamiento) de ese ejercicio en cada entreno, de antiguo a reciente
+export const sessionsOf = (key: string, ws: W[]): Session[] => {
+  const out: Session[] = [];
+  for (const w of ws) {
+    const sets: any[] = [];
+    for (const ex of Array.isArray(w.exercises) ? w.exercises : []) {
+      if (exerciseKey(ex).key !== key) continue;
+      for (const s of ex.sets ?? []) if (s.done !== false && s.type !== 'W') sets.push({ ...s, _kind: ex.kind });
+    }
+    if (sets.length) out.push({ workout: w, date: new Date(w.created_at), sets });
+  }
+  return out.sort((a, b) => +a.date - +b.date);
+};
+
+export const setNum = num;
+export const setEffReps = effReps;

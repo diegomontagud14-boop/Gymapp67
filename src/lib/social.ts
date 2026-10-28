@@ -366,3 +366,26 @@ export async function fetchAllWorkouts(userId: string): Promise<SocialWorkout[]>
   if (error) throw error;
   return (data ?? []) as unknown as SocialWorkout[];
 }
+
+/* ---------- Clasificación por ejercicio (necesita supabase_v3.sql) ---------- */
+export type LeaderRow = {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  max_weight: number;
+};
+
+export async function fetchExerciseLeaderboard(
+  ids: string[],
+  names: string[],
+  onlyFriends: boolean
+): Promise<LeaderRow[]> {
+  const { data, error } = await supabase.rpc('exercise_leaderboard', {
+    p_ids: ids,
+    p_names: names,
+    p_friends: onlyFriends,
+  });
+  if (error) throw error;
+  return ((data ?? []) as any[]).map((r) => ({ ...r, max_weight: Number(r.max_weight) })) as LeaderRow[];
+}

@@ -20,11 +20,9 @@ import {
   MONTHS,
   MONTHS_SHORT,
   buildDayMap,
-  currentStreak,
   dayKey,
   fireWeeksOf,
   mondayIndex,
-  restDays,
   weekKey,
   weekSetOf,
 } from '@/lib/stats';
@@ -64,7 +62,6 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
   const [detail, setDetail] = useState<SocialWorkout | null>(null);
   const [dayPick, setDayPick] = useState<W[] | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [holding, setHolding] = useState<{ y: number; m: number } | null>(null);
 
   const scrollRef = useRef<ScrollView | null>(null);
   const scrolled = useRef(false);
@@ -81,8 +78,6 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
   const dayMap = useMemo(() => buildDayMap(all ?? []), [all]);
   const weeks = useMemo(() => weekSetOf(all ?? []), [all]);
   const fire = useMemo(() => fireWeeksOf(weeks), [weeks]);
-  const streak = currentStreak(weeks);
-  const rest = restDays(dayMap);
 
   const now = new Date();
   const firstDate = useMemo(() => {
@@ -138,20 +133,6 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
 
   const monthView = (
     <>
-      <View style={styles.streakBar}>
-        <View style={styles.streakCell}>
-          <Ionicons name="flame" size={22} color={FIRE} />
-          <Text style={styles.streakText} numberOfLines={1}>
-            {streak > 0 ? `Racha de ${streak} ${streak === 1 ? 'semana' : 'semanas'}` : 'Sin racha'}
-          </Text>
-        </View>
-        <View style={[styles.streakCell, { borderLeftColor: '#222', borderLeftWidth: 1 }]}>
-          <Ionicons name="moon" size={20} color="#3B82F6" />
-          <Text style={styles.streakText} numberOfLines={1}>
-            {rest === null ? 'Sin entrenos' : rest === 0 ? 'Entrenaste hoy' : `${rest} ${rest === 1 ? 'día' : 'días'} de descanso`}
-          </Text>
-        </View>
-      </View>
       <View style={styles.dow}>
         {DAYS_SHORT.map((d) => (
           <Text key={d} style={styles.dowText}>
@@ -267,7 +248,7 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
       }}
       contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 }}
     >
-      <Text style={styles.hint}>Mantén pulsado un mes para ver sus estadísticas</Text>
+      <Text style={styles.hint}>Toca un mes para ver sus estadísticas</Text>
       {years.map((y) => (
         <View key={y}>
           <Text style={styles.yearTitle}>{y}</Text>
@@ -276,9 +257,14 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
               <Pressable
                 key={m}
                 style={styles.miniMonth}
-                delayLongPress={350}
-                onLongPress={() => setHolding({ y, m })}
-                onPressOut={() => setHolding(null)}
+                onPress={() =>
+                  setStats({
+                    title: `${MONTHS[m]} de ${y}`,
+                    list: inMonth(all ?? [], y, m),
+                    weeks: daysIn(y, m) / 7,
+                    extended: false,
+                  })
+                }
               >
                 <Text style={styles.miniTitle}>{MONTHS_SHORT[m]}</Text>
                 <View>
@@ -383,22 +369,6 @@ export default function CalendarScreen({ me, onExit }: { me: string; onExit: () 
         yearView
       ) : (
         allView
-      )}
-
-      {/* Vista rápida mientras mantienes pulsado un mes */}
-      {holding && mode === 'year' && (
-        <View pointerEvents="none" style={styles.overlay}>
-          <Text style={styles.overlayTitle}>
-            {MONTHS[holding.m]} de {holding.y}
-          </Text>
-          <ScrollView scrollEnabled={false} contentContainerStyle={{ padding: 18 }}>
-            <StatsView
-              workouts={inMonth(all ?? [], holding.y, holding.m)}
-              periodWeeks={daysIn(holding.y, holding.m) / 7}
-              compact
-            />
-          </ScrollView>
-        </View>
       )}
 
       <WorkoutDetailModal workout={detail} onClose={() => setDetail(null)} exit="right" />
